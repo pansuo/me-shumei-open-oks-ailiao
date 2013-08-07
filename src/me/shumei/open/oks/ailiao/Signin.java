@@ -45,6 +45,7 @@ public class Signin extends CommonData {
 			//Jsoup的Response
 			Response res;
 			
+			String sex = "1";//性别，0=>女，1=>男
 			String loginUrl = getLoginUrl(ctx, user, pwd);
 			String signinPageUrl = "";
 			String signinSubmitUrl = "";
@@ -54,11 +55,14 @@ public class Signin extends CommonData {
 			res = Jsoup.connect(loginUrl).userAgent(UA_ANDROID).timeout(TIME_OUT).ignoreContentType(true).method(Method.GET).execute();
 			cookies.putAll(res.cookies());
 			
-			if (res.body().contains("登录成功")) {
+			if (res.body().contains("登陆正确")) {
 				//访问签到页面
 				signinPageUrl = getSigninPageUrl(user, pwd);
 				res = Jsoup.connect(signinPageUrl).cookies(cookies).userAgent(UA_ANDROID).timeout(TIME_OUT).ignoreContentType(true).method(Method.GET).execute();
 				cookies.putAll(res.cookies());
+				
+				//获取用户性别
+				sex = getUserSex(res.body());
 				
 				//提交签到请求
 				//{"data":2145}
@@ -143,13 +147,39 @@ public class Signin extends CommonData {
 						case 224:
 							//android
 							resultFlag = "false";
-							resultStr = "签到失败！<br />您本月内至少在爱聊软件内下载一款精品软件才能签到。";
+							resultStr = "签到失败！\n您本月内至少在爱聊软件内下载一款精品软件才能签到。";
 							break;
 							
 						case 225:
 							//iphone
 							resultFlag = "false";
-							resultStr = "签到失败！<br />您本月内至少在爱聊软件内下载一款精品软件才能签到。";
+							resultStr = "签到失败！\n您本月内至少在爱聊软件内下载一款精品软件才能签到。";
+							break;
+	
+						case 230:
+							resultFlag = "false";
+							resultStr = "签到成功！已获得" + randomnumber + "个聊豆，但要在爱聊软件内与男生玩真心话" + randomnumber + "分钟以上才可到账";
+							break;
+	
+						case 231:
+							resultFlag = "false";
+							resultStr = "签到成功！已获得" + randomnumber + "个聊豆，但需要在爱聊软件内成功下载一款精品软件才可到账";
+							break;
+	
+						case 232:
+							resultFlag = "false";
+							if (sex.equals("0")) {
+								//女生权利
+								resultStr = "您今天已签到过了\n获得了" + randomnumber + "个聊豆,但需要在爱聊软件内与男生玩真心话" + randomnumber + "分钟以上即可到账";
+							} else {
+								//男生权利
+								resultStr = "您今天已签到过了\n获得了" + randomnumber + "个聊豆,但需要在成功下载一款精品软件才可到账";
+							}
+							break;
+	
+						case 233:
+							resultFlag = "false";
+							resultStr = "签到失败！网络繁忙,请重试!";
 							break;
 	
 						default:
@@ -202,7 +232,7 @@ public class Signin extends CommonData {
 		}
 		
 		StringBuilder sb = new StringBuilder();
-		sb.append("http://a.iitalk.net/login.asp?hwstatus=0&hwip=&ver=android(2.2.7)&imei=");
+		sb.append("http://n.a.aliaotian.net/user/login.php?hwstatus=0&hwip=&ver=android(2.3.8)&imei=");
 		sb.append(imei);
 		sb.append("&imsi=");
 		sb.append(imsi);
@@ -227,10 +257,9 @@ public class Signin extends CommonData {
 			sb.append(user);
 			sb.append("&pwd=");
 			sb.append(MD5.md5(user + "$%^2cDFs3" + pwd));
-			sb.append("&ver=2.2.7");
-			sb.append("&perform=android&rel=&linkid=0");
-			sb.append("&ad=yes&adid=1&title=");
-			sb.append(URLEncoder.encode("每日签到", "UTF-8"));
+			sb.append("&ver=2.3.8");
+			sb.append("&perform=android&rel=android&linkid=0");
+			sb.append("&ad=yes&adids=3&title=%E6%AF%8F%E6%97%A5%E7%AD%BE%E5%88%B0%28%E7%A7%AF%E5%B0%91%E6%88%90%E5%A4%9A%29&expire=&t_expire=&weibostat=3");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -255,9 +284,25 @@ public class Signin extends CommonData {
 		sb.append("http://220.231.194.251/dayup/index.php/ajax_data?");
 		sb.append("callback=?&u=");
 		sb.append(user);
-		sb.append("&v=2.2.7&p=android&l=0&w=1&sid=");
+		sb.append("&v=2.3.8&p=android&l=0&w=1&sid=");
 		sb.append(sid);
 		return sb.toString();
+	}
+	
+	/**
+	 * 获取用户的性别
+	 * 因为爱聊在签到完成后会根据性别来决定是否奖励签到时间
+	 * @param str 登录页面的html代码
+	 * @return
+	 */
+	private String getUserSex(String str) {
+		String tempSex = "1";
+		Pattern pattern  = Pattern.compile("var sex.*=.*'(.+)';");
+		Matcher matcher = pattern.matcher(str);
+		while (matcher.find()) {
+			tempSex = matcher.group(1);
+		}
+		return tempSex;
 	}
 	
 	
